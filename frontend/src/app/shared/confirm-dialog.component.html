@@ -1,0 +1,34 @@
+@if (open) {
+  <div class="scrim" (click)="cancelled.emit()" data-testid="confirm-scrim"></div>
+  <div
+    class="dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="confirm-title"
+    data-testid="confirm-dialog"
+  >
+    <h2 class="dialog__title" id="confirm-title">{{ title }}</h2>
+
+    @if (blockedReason) {
+      <div class="banner banner--warn" data-testid="confirm-blocked">
+        <div class="banner__body">
+          <div class="banner__title">Can’t delete this yet</div>
+          {{ blockedReason }}
+        </div>
+      </div>
+    } @else {
+      <p class="dialog__message">{{ message }}</p>
+    }
+
+    <div class="dialog__actions">
+      <button type="button" class="btn btn--secondary" (click)="cancelled.emit()" data-testid="confirm-cancel">
+        {{ blockedReason ? 'Close' : 'Cancel' }}
+      </button>
+      @if (!blockedReason) {
+        <button type="button" class="btn btn--danger" (click)="confirmed.emit()" data-testid="confirm-accept">
+          {{ confirmLabel }}
+        </button>
+      }
+    </div>
+  </div>
+}

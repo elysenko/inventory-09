@@ -1,0 +1,23 @@
+.scrim { position: fixed; inset: 0; background: var(--color-scrim); z-index: 50; }
+
+.dialog {
+  position: fixed; z-index: 51;
+  left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(480px, calc(100vw - 2rem));
+  background: var(--color-surface); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg); padding: var(--space-5);
+}
+.dialog__title { font-size: var(--text-lg); margin-bottom: var(--space-3); }
+.dialog__message { color: var(--color-text-muted); font-size: var(--text-sm); }
+.dialog__actions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-5); }
+
+@media (max-width: 768px) {
+  /* Bottom sheet on narrow viewports — primary action stays in thumb reach. */
+  .dialog {
+    top: auto; bottom: 0; left: 0; transform: none;
+    width: 100%; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
+  }
+  .dialog__actions { flex-direction: column-reverse; }
+  .dialog__actions .btn { width: 100%; }
+}

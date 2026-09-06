@@ -2,12 +2,39 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>App</title>
+    <title>StockRoom</title>
     <base href="/" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      /**
+       * Preview builds are served either at the origin root or under a
+       * per-mockup path prefix (/<mockup_id>/). Resolve <base> from the served
+       * path so bundles, assets and deep links work in both cases without a
+       * rebuild. Any first path segment that is not a known app route is
+       * treated as the mount prefix.
+       */
+      (function () {
+        var APP_ROUTES = ['login', 'signup', 'items', 'locations', 'movements', 'reports', 'admin'];
+        var seg = window.location.pathname.split('/')[1] || '';
+        var href = seg && APP_ROUTES.indexOf(seg) === -1 ? '/' + seg + '/' : '/';
+        document.querySelector('base').setAttribute('href', href);
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="StockRoom — warehouse inventory and stock movement tracking." />
+    <meta name="theme-color" content="#312e81" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
   </head>
   <body>
-    <app-root></app-root>
+    <!--
+      Static app-shell markup: puts the StockRoom brand in the DOM before Angular
+      bootstraps, so the name is present on the unauthenticated / -> /login redirect
+      regardless of bundle or redirect timing. Angular replaces this on bootstrap.
+    -->
+    <app-root>
+      <div class="boot-shell">
+        <div class="boot-shell__brand">StockRoom</div>
+        <div class="boot-shell__hint">Loading inventory workspace&hellip;</div>
+      </div>
+    </app-root>
   </body>
 </html>

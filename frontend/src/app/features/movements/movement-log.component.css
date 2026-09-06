@@ -1,0 +1,14 @@
+.filters {
+  display: grid; gap: var(--space-3) var(--space-4); align-items: end;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin-bottom: var(--space-4); padding: var(--space-4);
+}
+.filters .field { margin-bottom: 0; min-width: 0; }
+.filters__clear { justify-self: start; }
+
+@media (max-width: 768px) {
+  /* Single column: date inputs cannot render narrower than ~150px, so a
+     two-column grid overflows a 375px viewport. */
+  .filters { grid-template-columns: 1fr; padding: var(--space-3); }
+  .filters__clear { justify-self: stretch; }
+}

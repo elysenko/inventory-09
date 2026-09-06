@@ -1,0 +1,70 @@
+<div class="auth">
+  <div class="auth__panel">
+    <div class="auth__brand" data-testid="auth-brand">
+      <span class="auth__mark" aria-hidden="true">◧</span>
+      <span>StockRoom</span>
+    </div>
+    <p class="auth__tagline">Warehouse inventory &amp; stock movement tracking</p>
+
+    <div class="card auth__card">
+      <h1 class="auth__title">Create your account</h1>
+      <p class="auth__subtitle">New accounts start with clerk access.</p>
+
+      @if (formError()) {
+        <div class="banner banner--danger" role="alert" data-testid="signup-error">
+          <div class="banner__body">{{ formError() }}</div>
+        </div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="field">
+          <label class="field__label" for="name">Full name</label>
+          <input id="name" class="input" [class.input--invalid]="errorFor('name')" type="text"
+                 formControlName="name" autocomplete="name" placeholder="Alex Morgan" data-testid="signup-name" />
+          @if (errorFor('name'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="signup-email">Email</label>
+          <input id="signup-email" class="input" [class.input--invalid]="errorFor('email')" type="email"
+                 formControlName="email" autocomplete="username" inputmode="email"
+                 placeholder="you@company.com" data-testid="signup-email" />
+          @if (errorFor('email'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="signup-password">Password</label>
+          <input id="signup-password" class="input" [class.input--invalid]="errorFor('password')"
+                 type="password" formControlName="password" autocomplete="new-password" data-testid="signup-password" />
+          <span class="field__hint">At least 8 characters.</span>
+          @if (errorFor('password'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="confirm-password">Confirm password</label>
+          <input id="confirm-password" class="input" [class.input--invalid]="errorFor('confirmPassword')"
+                 type="password" formControlName="confirmPassword" autocomplete="new-password"
+                 data-testid="signup-confirm" />
+          @if (errorFor('confirmPassword'); as message) {
+            <span class="field__error" data-testid="signup-confirm-error">{{ message }}</span>
+          }
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--block" [disabled]="submitting()" data-testid="signup-submit">
+          {{ submitting() ? 'Creating account…' : 'Create account' }}
+        </button>
+      </form>
+
+      <p class="auth__switch">
+        Already have an account?
+        <a routerLink="/login" data-testid="link-login">Sign in</a>
+      </p>
+    </div>
+  </div>
+</div>

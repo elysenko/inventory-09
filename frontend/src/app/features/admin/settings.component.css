@@ -1,0 +1,10 @@
+.service { display: flex; flex-direction: column; }
+.service__header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: var(--space-3); margin-bottom: var(--space-4);
+}
+.service__header .card__hint { margin-bottom: 0; }
+.service__saved {
+  margin: var(--space-3) 0 0; text-align: center;
+  font-size: var(--text-sm); color: var(--color-ok-700); font-weight: 600;
+}

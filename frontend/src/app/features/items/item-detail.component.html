@@ -1,0 +1,143 @@
+<div class="page">
+  @if (item(); as item) {
+    <nav class="crumbs"><a routerLink="/items">← Back to items</a></nav>
+
+    <header class="page__header">
+      <div>
+        <div class="row">
+          <h1 class="page__title">{{ item.name }}</h1>
+          @if (isLow()) {
+            <span class="badge badge--warn" data-testid="detail-low">Low stock</span>
+          }
+        </div>
+        <p class="page__subtitle">
+          <span class="mono">{{ item.sku }}</span> · measured in {{ item.unit }} · reorder at {{ item.reorderAt }}
+        </p>
+      </div>
+      <div class="page__actions">
+        <a class="btn btn--secondary"
+           [routerLink]="['/movements/new']"
+           [queryParams]="{ itemId: item.id }"
+           data-testid="detail-move">Record movement</a>
+        @if (isManager()) {
+          <a class="btn btn--primary" [routerLink]="['/items', item.id, 'edit']" data-testid="detail-edit">Edit item</a>
+        }
+      </div>
+    </header>
+
+    @if (item.description) {
+      <p class="detail__description">{{ item.description }}</p>
+    }
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat__label">Total on hand</div>
+        <div class="stat__value" data-testid="detail-total">{{ item.totalQty }}</div>
+        <div class="stat__unit">{{ item.unit }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Reorder point</div>
+        <div class="stat__value">{{ item.reorderAt }}</div>
+        <div class="stat__unit">{{ item.unit }}</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Locations holding stock</div>
+        <div class="stat__value">{{ breakdown().length }}</div>
+        <div class="stat__unit">of 3 zones</div>
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" class="tab" [class.tab--active]="tab() === 'stock'"
+              [attr.aria-selected]="tab() === 'stock'" (click)="selectTab('stock')" data-testid="tab-stock">
+        Stock by location
+      </button>
+      <button type="button" role="tab" class="tab" [class.tab--active]="tab() === 'history'"
+              [attr.aria-selected]="tab() === 'history'" (click)="selectTab('history')" data-testid="tab-history">
+        Movement history
+      </button>
+    </div>
+
+    @if (tab() === 'stock') {
+      @if (breakdown().length === 0) {
+        <div class="card empty" data-testid="detail-stock-empty">
+          <div class="empty__title">No stock recorded</div>
+          <p class="empty__body">This item is not held in any location yet.</p>
+          <a class="btn btn--primary" [routerLink]="['/movements/new']"
+             [queryParams]="{ type: 'IN', itemId: item.id }">Receive stock</a>
+        </div>
+      } @else {
+        <div class="table-wrap">
+          <table class="table" data-testid="detail-stock-table">
+            <caption class="visually-hidden">Stock held per location</caption>
+            <thead>
+              <tr>
+                <th scope="col">Location</th>
+                <th scope="col">Zone</th>
+                <th scope="col" class="num">Quantity</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (level of breakdown(); track level.id) {
+                <tr [attr.data-testid]="'stock-row-' + level.locationId">
+                  <td>{{ level.locationName }}</td>
+                  <td>{{ level.zone }}</td>
+                  <td class="num"><strong>{{ level.qty }}</strong></td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row" colspan="2">Total across locations</th>
+                <td class="num" data-testid="detail-breakdown-total"><strong>{{ breakdownTotal() }}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      }
+    } @else {
+      @if (history().length === 0) {
+        <div class="card empty" data-testid="detail-history-empty">
+          <div class="empty__title">No movements yet</div>
+          <p class="empty__body">Stock movements for this item will appear here once recorded.</p>
+        </div>
+      } @else {
+        <div class="table-wrap">
+          <table class="table" data-testid="detail-history-table">
+            <caption class="visually-hidden">Movement history for this item</caption>
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Type</th>
+                <th scope="col">From</th>
+                <th scope="col">To</th>
+                <th scope="col" class="num">Qty</th>
+                <th scope="col">Recorded by</th>
+                <th scope="col">Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (movement of history(); track movement.id) {
+                <tr>
+                  <td>{{ movement.createdAt | date: 'd MMM yyyy' }}</td>
+                  <td><span [class]="badgeClass(movement.type)">{{ movement.type }}</span></td>
+                  <td>{{ movement.fromLocName ?? '—' }}</td>
+                  <td>{{ movement.toLocName ?? '—' }}</td>
+                  <td class="num">{{ movement.qty }}</td>
+                  <td>{{ movement.userEmail }}</td>
+                  <td class="wrap">{{ movement.note ?? '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  } @else {
+    <div class="card empty" data-testid="detail-not-found">
+      <div class="empty__title">Item not found</div>
+      <p class="empty__body">That item may have been deleted.</p>
+      <a class="btn btn--primary" routerLink="/items">Back to items</a>
+    </div>
+  }
+</div>

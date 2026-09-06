@@ -1,0 +1,90 @@
+<div class="shell">
+  <!-- Mobile top bar -->
+  <header class="topbar" data-testid="shell-topbar">
+    <button
+      type="button"
+      class="topbar__menu"
+      (click)="toggleDrawer()"
+      [attr.aria-expanded]="drawerOpen()"
+      aria-controls="shell-nav"
+      aria-label="Toggle navigation menu"
+      data-testid="nav-toggle"
+    >
+      <span class="topbar__menu-bar"></span>
+      <span class="topbar__menu-bar"></span>
+      <span class="topbar__menu-bar"></span>
+    </button>
+    <a class="brand brand--compact" routerLink="/items">StockRoom</a>
+    <span class="spacer"></span>
+    <span class="avatar" [title]="user()?.email ?? ''">{{ initials() }}</span>
+  </header>
+
+  @if (drawerOpen()) {
+    <div class="scrim" (click)="closeDrawer()" data-testid="nav-scrim"></div>
+  }
+
+  <!-- Sidebar (desktop) / drawer (mobile) -->
+  <nav
+    id="shell-nav"
+    class="nav"
+    [class.nav--open]="drawerOpen()"
+    aria-label="Main navigation"
+    data-testid="shell-nav"
+  >
+    <a class="brand" routerLink="/items" data-testid="shell-brand">
+      <span class="brand__mark" aria-hidden="true">◧</span>
+      <span class="brand__text">StockRoom</span>
+    </a>
+
+    <ul class="nav__list">
+      @for (item of navItems(); track item.path) {
+        <li>
+          <a
+            class="nav__link"
+            [routerLink]="item.path"
+            routerLinkActive="nav__link--active"
+            [routerLinkActiveOptions]="{ exact: item.path === '/movements' }"
+            [attr.data-testid]="'nav-' + item.label.toLowerCase().split(' ').join('-')"
+          >
+            <span class="nav__icon" aria-hidden="true">{{ item.icon }}</span>
+            <span>{{ item.label }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+
+    <div class="nav__footer">
+      @if (previewRoleLabel; as roleLabel) {
+        <div class="role-switch">
+          <label class="role-switch__label" for="preview-role">{{ roleLabel }}</label>
+          <select
+            id="preview-role"
+            class="select select--sm"
+            (change)="onRoleChange($event)"
+            data-testid="preview-role-select"
+          >
+            @for (option of roleOptions; track option) {
+              <option [value]="option" [selected]="option === user()?.role">{{ option }}</option>
+            }
+          </select>
+          <p class="role-switch__hint">{{ previewRoleHint }}</p>
+        </div>
+      }
+
+      <div class="account">
+        <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+        <div class="account__meta">
+          <div class="account__name">{{ user()?.name || user()?.email }}</div>
+          <div class="account__role">{{ user()?.role }}</div>
+        </div>
+      </div>
+      <button type="button" class="btn btn--secondary btn--block" (click)="logout()" data-testid="logout">
+        Sign out
+      </button>
+    </div>
+  </nav>
+
+  <main class="content" data-testid="shell-content">
+    <router-outlet />
+  </main>
+</div>

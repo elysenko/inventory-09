@@ -1,0 +1,84 @@
+<div class="page">
+  <header class="page__header">
+    <div>
+      <h1 class="page__title">Low stock</h1>
+      <p class="page__subtitle">
+        Items whose total on hand has reached or fallen below their reorder point, largest shortfall first.
+      </p>
+    </div>
+    <div class="page__actions">
+      <a class="btn btn--secondary" routerLink="/items" [queryParams]="{ lowOnly: 'true' }" data-testid="low-view-items">
+        View in catalogue
+      </a>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="card empty" data-testid="low-loading">Loading report…</div>
+  } @else if (error()) {
+    <div class="banner banner--danger" data-testid="low-error">
+      <div class="banner__body">{{ error() }}</div>
+    </div>
+  } @else if (sorted().length === 0) {
+    <div class="card empty" data-testid="low-empty">
+      <div class="empty__title">Nothing is low on stock</div>
+      <p class="empty__body">
+        Every item in the catalogue is currently above its reorder point. Nothing needs reordering.
+      </p>
+      <a class="btn btn--secondary" routerLink="/items">Back to items</a>
+    </div>
+  } @else {
+    <div class="banner banner--warn" data-testid="low-summary">
+      <div class="banner__body">
+        <div class="banner__title">{{ sorted().length }} item(s) need attention</div>
+        {{ criticalCount() }} are below their reorder point and
+        {{ sorted().length - criticalCount() }} sit exactly at it.
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table" data-testid="low-table">
+        <caption class="visually-hidden">Items at or below their reorder point</caption>
+        <thead>
+          <tr>
+            <th scope="col">SKU</th>
+            <th scope="col">Item</th>
+            <th scope="col" class="num">On hand</th>
+            <th scope="col" class="num">Reorder at</th>
+            <th scope="col" class="num">Shortfall</th>
+            <th scope="col">Coverage</th>
+            <th scope="col"><span class="visually-hidden">Action</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of sorted(); track row.id) {
+            <tr [attr.data-testid]="'low-row-' + row.sku">
+              <td class="mono"><a [routerLink]="['/items', row.id]">{{ row.sku }}</a></td>
+              <td class="wrap">
+                <a [routerLink]="['/items', row.id]">{{ row.name }}</a>
+                <div class="row-unit">per {{ row.unit }}</div>
+              </td>
+              <td class="num">{{ row.totalQty }}</td>
+              <td class="num">{{ row.reorderAt }}</td>
+              <td class="num">
+                <strong [attr.data-testid]="'low-shortfall-' + row.sku">{{ row.shortfall }}</strong>
+              </td>
+              <td>
+                <div class="gauge" [attr.aria-label]="fillPercent(row) + '% of reorder point'">
+                  <div class="gauge__fill" [style.width.%]="fillPercent(row)"></div>
+                </div>
+                <span [class]="severity(row)">{{ severityLabel(row) }}</span>
+              </td>
+              <td>
+                <a class="btn btn--secondary btn--sm"
+                   [routerLink]="['/movements/new']"
+                   [queryParams]="{ type: 'IN', itemId: row.id }"
+                   [attr.data-testid]="'low-restock-' + row.sku">Receive stock</a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

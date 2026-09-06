@@ -1,0 +1,92 @@
+<div class="page page--narrow">
+  <nav class="crumbs"><a routerLink="/items">← Back to items</a></nav>
+
+  <header class="page__header">
+    <div>
+      <h1 class="page__title">{{ isEdit() ? 'Edit item' : 'New item' }}</h1>
+      <p class="page__subtitle">
+        {{ isEdit() ? 'Update the catalogue record for this item.' : 'Add a new item to the catalogue.' }}
+      </p>
+    </div>
+  </header>
+
+  @if (formError()) {
+    <div class="banner banner--danger" role="alert" data-testid="item-form-error">
+      <div class="banner__body">{{ formError() }}</div>
+    </div>
+  }
+
+  <div class="card">
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <div class="form-grid">
+        <div class="field">
+          <label class="field__label" for="sku">SKU</label>
+          <input id="sku" class="input mono" [class.input--invalid]="errorFor('sku')" type="text"
+                 formControlName="sku" placeholder="SKU-009" data-testid="item-sku" />
+          <span class="field__hint">Must be unique across the catalogue.</span>
+          @if (errorFor('sku'); as message) {
+            <span class="field__error" data-testid="item-sku-error">{{ message }}</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="item-name">Name</label>
+          <input id="item-name" class="input" [class.input--invalid]="errorFor('name')" type="text"
+                 formControlName="name" placeholder="Steel Bracket M8" data-testid="item-name" />
+          @if (errorFor('name'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="unit">Unit</label>
+          <select id="unit" class="select" formControlName="unit" data-testid="item-unit">
+            @for (unit of units(); track unit) {
+              <option [value]="unit">{{ unit }}</option>
+            }
+          </select>
+          <span class="field__hint">How this item is counted.</span>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="reorder-at">Reorder at</label>
+          <input id="reorder-at" class="input" [class.input--invalid]="errorFor('reorderAt')"
+                 type="number" min="0" step="1" formControlName="reorderAt" data-testid="item-reorder" />
+          <span class="field__hint">Flagged as low when total on hand falls to this level.</span>
+          @if (errorFor('reorderAt'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="description">Description</label>
+        <textarea id="description" class="textarea" formControlName="description" rows="3"
+                  placeholder="Optional notes about this item" data-testid="item-description"></textarea>
+      </div>
+
+      <div class="form-actions">
+        @if (isEdit()) {
+          <button type="button" class="btn btn--danger" (click)="openDelete()" data-testid="item-delete">
+            Delete item
+          </button>
+        }
+        <span class="spacer"></span>
+        <a class="btn btn--secondary" routerLink="/items" data-testid="item-cancel">Cancel</a>
+        <button type="submit" class="btn btn--primary" [disabled]="saving()" data-testid="item-save">
+          {{ isEdit() ? 'Save changes' : 'Create item' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <app-confirm-dialog
+    [open]="deleteOpen()"
+    [title]="'Delete ' + (existing()?.name ?? 'this item') + '?'"
+    message="This removes the item from the catalogue. Items with recorded movements cannot be deleted."
+    confirmLabel="Delete item"
+    [blockedReason]="deleteBlockedReason()"
+    (confirmed)="confirmDelete()"
+    (cancelled)="closeDelete()"
+  />
+</div>

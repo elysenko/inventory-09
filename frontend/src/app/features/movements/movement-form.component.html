@@ -1,0 +1,128 @@
+<div class="page page--narrow">
+  <nav class="crumbs"><a routerLink="/items">← Back to items</a></nav>
+
+  <header class="page__header">
+    <div>
+      <h1 class="page__title">Record movement</h1>
+      <p class="page__subtitle">{{ typeBlurb() }}</p>
+    </div>
+  </header>
+
+  @if (saved()) {
+    <div class="banner banner--ok" role="status" data-testid="movement-success">
+      <div class="banner__body">
+        <div class="banner__title">Movement recorded</div>
+        Stock levels have been updated. Movements are immutable — correct a mistake by recording a
+        compensating movement.
+      </div>
+    </div>
+  }
+
+  @if (formError()) {
+    <div class="banner banner--danger" role="alert" data-testid="movement-error">
+      <div class="banner__body">
+        <div class="banner__title">Movement rejected</div>
+        {{ formError() }}
+      </div>
+    </div>
+  }
+
+  <div class="card">
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <fieldset class="type-picker">
+        <legend class="field__label">Movement type</legend>
+        <div class="type-picker__options">
+          @for (option of types; track option.value) {
+            <button
+              type="button"
+              class="type-option"
+              [class.type-option--active]="type() === option.value"
+              (click)="selectType(option.value)"
+              [attr.aria-pressed]="type() === option.value"
+              [attr.data-testid]="'movement-type-' + option.value"
+            >
+              <span class="type-option__label">{{ option.label }}</span>
+              <span class="type-option__code">{{ option.value }}</span>
+            </button>
+          }
+        </div>
+      </fieldset>
+
+      <div class="field">
+        <label class="field__label" for="movement-item">Item</label>
+        <select id="movement-item" class="select" [class.select--invalid]="errorFor('itemId')"
+                formControlName="itemId" data-testid="movement-item">
+          <option value="">Select an item…</option>
+          @for (item of items(); track item.id) {
+            <option [value]="item.id">{{ item.sku }} — {{ item.name }}</option>
+          }
+        </select>
+        @if (errorFor('itemId'); as message) {
+          <span class="field__error">{{ message }}</span>
+        }
+      </div>
+
+      <div class="form-grid">
+        @if (needsFrom()) {
+          <div class="field">
+            <label class="field__label" for="from-loc">From location</label>
+            <select id="from-loc" class="select" formControlName="fromLocId" data-testid="movement-from">
+              <option value="">Select a location…</option>
+              @for (location of locations(); track location.id) {
+                <option [value]="location.id">{{ location.name }} — {{ location.zone }}</option>
+              }
+            </select>
+            @if (availableAtSource() !== null) {
+              <span class="field__hint" data-testid="movement-available">
+                {{ availableAtSource() }} {{ selectedItem()?.unit ?? 'units' }} available here.
+              </span>
+            }
+          </div>
+        }
+
+        @if (needsTo()) {
+          <div class="field">
+            <label class="field__label" for="to-loc">To location</label>
+            <select id="to-loc" class="select" formControlName="toLocId" data-testid="movement-to">
+              <option value="">Select a location…</option>
+              @for (location of locations(); track location.id) {
+                <option [value]="location.id">{{ location.name }} — {{ location.zone }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <div class="field">
+          <label class="field__label" for="movement-qty">Quantity</label>
+          <input id="movement-qty" class="input" [class.input--invalid]="errorFor('qty')"
+                 type="number" min="1" step="1" formControlName="qty" data-testid="movement-qty" />
+          <span class="field__hint">Whole units, at least 1.</span>
+          @if (errorFor('qty'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="movement-note">Note</label>
+        <input id="movement-note" class="input" type="text" formControlName="note"
+               placeholder="Purchase order, works order or reason (optional)" data-testid="movement-note" />
+      </div>
+
+      <div class="form-actions">
+        @if (saved()) {
+          <button type="button" class="btn btn--secondary" (click)="reset()" data-testid="movement-another">
+            Record another
+          </button>
+        }
+        <span class="spacer"></span>
+        @if (isManager()) {
+          <a class="btn btn--secondary" routerLink="/movements">View movement log</a>
+        }
+        <button type="submit" class="btn btn--primary" [disabled]="saving()" data-testid="movement-submit">
+          {{ saving() ? 'Recording…' : 'Record movement' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

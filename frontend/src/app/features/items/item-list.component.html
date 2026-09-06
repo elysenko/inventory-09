@@ -1,0 +1,120 @@
+<div class="page">
+  <header class="page__header">
+    <div>
+      <h1 class="page__title">Items</h1>
+      <p class="page__subtitle">{{ total() }} of {{ items().length }} items · {{ lowCount() }} at or below reorder point</p>
+    </div>
+    <div class="page__actions">
+      <a class="btn btn--secondary" routerLink="/movements/new" data-testid="items-record-movement">Record movement</a>
+      @if (isManager()) {
+        <a class="btn btn--primary" routerLink="/items/new" data-testid="items-new">New item</a>
+      }
+    </div>
+  </header>
+
+  <div class="filters card">
+    <div class="field filters__search">
+      <label class="field__label" for="item-search">Search</label>
+      <input
+        id="item-search"
+        class="input"
+        type="search"
+        placeholder="Search by SKU or name…"
+        [value]="query()"
+        (change)="onSearch($event)"
+        data-testid="items-search"
+      />
+    </div>
+    <label class="check filters__toggle">
+      <input type="checkbox" [checked]="lowOnly()" (change)="onLowOnly($event)" data-testid="items-low-only" />
+      <span>Low stock only</span>
+    </label>
+    @if (hasFilters()) {
+      <button type="button" class="btn btn--ghost btn--sm" (click)="clearFilters()" data-testid="items-clear">
+        Clear filters
+      </button>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="card empty" data-testid="items-loading">Loading items…</div>
+  } @else if (error()) {
+    <div class="banner banner--danger" data-testid="items-error">
+      <div class="banner__body">{{ error() }}</div>
+    </div>
+  } @else if (visible().length === 0) {
+    <div class="card empty" data-testid="items-empty">
+      <div class="empty__title">No items match those filters</div>
+      <p class="empty__body">Try a different search term, or clear the filters to see the full catalogue.</p>
+      <button type="button" class="btn btn--secondary" (click)="clearFilters()">Clear filters</button>
+    </div>
+  } @else {
+    <div class="table-wrap">
+      <table class="table" data-testid="items-table">
+        <caption class="visually-hidden">Item catalogue with total quantity on hand</caption>
+        <thead>
+          <tr>
+            <th scope="col">
+              <button type="button" class="sort-btn" (click)="toggleSort('sku')" data-testid="sort-sku">
+                SKU <span aria-hidden="true">{{ sortIndicator('sku') }}</span>
+              </button>
+            </th>
+            <th scope="col">
+              <button type="button" class="sort-btn" (click)="toggleSort('name')" data-testid="sort-name">
+                Name <span aria-hidden="true">{{ sortIndicator('name') }}</span>
+              </button>
+            </th>
+            <th scope="col">Unit</th>
+            <th scope="col" class="num">
+              <button type="button" class="sort-btn" (click)="toggleSort('reorderAt')">
+                Reorder at <span aria-hidden="true">{{ sortIndicator('reorderAt') }}</span>
+              </button>
+            </th>
+            <th scope="col" class="num">
+              <button type="button" class="sort-btn" (click)="toggleSort('totalQty')" data-testid="sort-total">
+                On hand <span aria-hidden="true">{{ sortIndicator('totalQty') }}</span>
+              </button>
+            </th>
+            <th scope="col"><span class="visually-hidden">Status</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of visible(); track item.id) {
+            <tr [attr.data-testid]="'item-row-' + item.sku">
+              <td class="mono">
+                <a [routerLink]="['/items', item.id]">{{ item.sku }}</a>
+              </td>
+              <td class="wrap">
+                <a [routerLink]="['/items', item.id]">{{ item.name }}</a>
+              </td>
+              <td>{{ item.unit }}</td>
+              <td class="num">{{ item.reorderAt }}</td>
+              <td class="num"><strong>{{ item.totalQty }}</strong></td>
+              <td>
+                @if (isLow(item)) {
+                  <span class="badge badge--warn" data-testid="badge-low">Low</span>
+                } @else {
+                  <span class="badge badge--ok">OK</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pager">
+      <span class="pager__info" data-testid="items-range">
+        Showing {{ rangeStart() }}–{{ rangeEnd() }} of {{ total() }}
+      </span>
+      <div class="pager__controls">
+        <button type="button" class="btn btn--secondary btn--sm" [disabled]="currentPage() <= 1"
+                (click)="goToPage(currentPage() - 1)" data-testid="items-prev">Previous</button>
+        <button type="button" class="btn btn--secondary btn--sm" [disabled]="currentPage() >= pageCount()"
+                (click)="goToPage(currentPage() + 1)" data-testid="items-next">Next</button>
+      </div>
+    </div>
+  }
+
+  <a class="fab" routerLink="/movements/new" aria-label="Record a stock movement" data-testid="items-fab">＋</a>
+</div>

@@ -1,0 +1,67 @@
+<div class="page">
+  <header class="page__header">
+    <div>
+      <h1 class="page__title">Locations</h1>
+      <p class="page__subtitle">{{ rows().length }} storage locations</p>
+    </div>
+    <div class="page__actions">
+      <a class="btn btn--primary" routerLink="/locations/new" data-testid="locations-new">New location</a>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="card empty" data-testid="locations-loading">Loading locations…</div>
+  } @else if (error()) {
+    <div class="banner banner--danger" data-testid="locations-error">
+      <div class="banner__body">{{ error() }}</div>
+    </div>
+  } @else if (rows().length === 0) {
+    <div class="card empty" data-testid="locations-empty">
+      <div class="empty__title">No locations yet</div>
+      <p class="empty__body">Add a storage location before recording stock movements.</p>
+      <a class="btn btn--primary" routerLink="/locations/new">New location</a>
+    </div>
+  } @else {
+    <div class="table-wrap">
+      <table class="table" data-testid="locations-table">
+        <caption class="visually-hidden">Storage locations and the stock they hold</caption>
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Zone</th>
+            <th scope="col" class="num">Items</th>
+            <th scope="col" class="num">Units held</th>
+            <th scope="col"><span class="visually-hidden">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.id) {
+            <tr [attr.data-testid]="'location-row-' + row.id">
+              <td><strong>{{ row.name }}</strong></td>
+              <td>{{ row.zone }}</td>
+              <td class="num">{{ row.distinctItems }}</td>
+              <td class="num">{{ row.totalQty }}</td>
+              <td>
+                <div class="row-actions">
+                  <a class="btn btn--secondary btn--sm" [routerLink]="['/locations', row.id, 'edit']">Edit</a>
+                  <button type="button" class="btn btn--ghost btn--sm" (click)="openDelete(row.id)"
+                          [attr.data-testid]="'location-delete-' + row.id">Delete</button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <app-confirm-dialog
+    [open]="deleteTarget() !== null"
+    [title]="'Delete ' + (deleteTarget()?.name ?? 'location') + '?'"
+    message="This removes the storage location. Locations holding stock cannot be deleted."
+    confirmLabel="Delete location"
+    [blockedReason]="deleteBlockedReason()"
+    (confirmed)="confirmDelete()"
+    (cancelled)="closeDelete()"
+  />
+</div>

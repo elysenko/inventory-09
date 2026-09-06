@@ -1,0 +1,71 @@
+<div class="page">
+  <header class="page__header">
+    <div>
+      <h1 class="page__title">Admin settings</h1>
+      <p class="page__subtitle">
+        Credentials for the backing services. Values resolve from environment variables first, then
+        from stored settings.
+      </p>
+    </div>
+  </header>
+
+  @if (unconfigured().length > 0) {
+    <div class="banner banner--warn" role="alert" data-testid="settings-banner">
+      <div class="banner__body">
+        <div class="banner__title">The following need credentials to activate:</div>
+        <span data-testid="settings-unconfigured">{{ unconfiguredLabels() }}</span>
+      </div>
+    </div>
+  } @else {
+    <div class="banner banner--ok" data-testid="settings-all-configured">
+      <div class="banner__body">All backing services are configured.</div>
+    </div>
+  }
+
+  <div class="grid-auto">
+    @for (service of services; track service.service) {
+      <section class="card service" [attr.data-testid]="'service-card-' + service.service">
+        <header class="service__header">
+          <div>
+            <h2 class="card__title">{{ service.label }}</h2>
+            <p class="card__hint">{{ service.blurb }}</p>
+          </div>
+          @if (isConfigured(service.service)) {
+            <span class="badge badge--ok" [attr.data-testid]="'status-' + service.service">Configured</span>
+          } @else {
+            <span class="badge badge--warn" [attr.data-testid]="'status-' + service.service">Not configured</span>
+          }
+        </header>
+
+        <form [formGroup]="form" (ngSubmit)="save(service.service)" novalidate>
+          @for (entry of entriesFor(service.service); track entry.key) {
+            <div class="field">
+              <label class="field__label" [attr.for]="entry.key">{{ entry.label }}</label>
+              <input
+                [id]="entry.key"
+                class="input"
+                [type]="isSecret(entry.key) ? 'password' : 'text'"
+                [formControlName]="controlName(entry.key)"
+                [placeholder]="entry.value || 'Not set'"
+                [attr.data-testid]="'input-' + entry.key"
+                autocomplete="off"
+              />
+              <span class="field__hint mono">{{ entry.key }}</span>
+            </div>
+          }
+
+          <button type="submit" class="btn btn--primary btn--block" [disabled]="saving()"
+                  [attr.data-testid]="'save-' + service.service">
+            Save {{ service.label }} credentials
+          </button>
+
+          @if (savedService() === service.service) {
+            <p class="service__saved" role="status" [attr.data-testid]="'saved-' + service.service">
+              Credentials saved.
+            </p>
+          }
+        </form>
+      </section>
+    }
+  </div>
+</div>

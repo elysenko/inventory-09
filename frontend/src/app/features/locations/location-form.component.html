@@ -1,0 +1,52 @@
+<div class="page page--narrow">
+  <nav class="crumbs"><a routerLink="/locations">← Back to locations</a></nav>
+
+  <header class="page__header">
+    <div>
+      <h1 class="page__title">{{ isEdit() ? 'Edit location' : 'New location' }}</h1>
+      <p class="page__subtitle">
+        {{ isEdit() ? 'Update this storage location.' : 'Add a storage location for holding stock.' }}
+      </p>
+    </div>
+  </header>
+
+  @if (formError()) {
+    <div class="banner banner--danger" role="alert" data-testid="location-form-error">
+      <div class="banner__body">{{ formError() }}</div>
+    </div>
+  }
+
+  <div class="card">
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+      <div class="form-grid">
+        <div class="field">
+          <label class="field__label" for="location-name">Name</label>
+          <input id="location-name" class="input" [class.input--invalid]="errorFor('name')" type="text"
+                 formControlName="name" placeholder="Zone E" data-testid="location-name" />
+          <span class="field__hint">Must be unique.</span>
+          @if (errorFor('name'); as message) {
+            <span class="field__error" data-testid="location-name-error">{{ message }}</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="location-zone">Zone</label>
+          <input id="location-zone" class="input" [class.input--invalid]="errorFor('zone')" type="text"
+                 formControlName="zone" placeholder="Receiving" data-testid="location-zone" />
+          <span class="field__hint">What this area is used for.</span>
+          @if (errorFor('zone'); as message) {
+            <span class="field__error">{{ message }}</span>
+          }
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <span class="spacer"></span>
+        <a class="btn btn--secondary" routerLink="/locations">Cancel</a>
+        <button type="submit" class="btn btn--primary" [disabled]="saving()" data-testid="location-save">
+          {{ isEdit() ? 'Save changes' : 'Create location' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,81 @@
+<div class="auth">
+  <div class="auth__panel">
+    <div class="auth__brand" data-testid="auth-brand">
+      <span class="auth__mark" aria-hidden="true">◧</span>
+      <span>StockRoom</span>
+    </div>
+    <p class="auth__tagline">Warehouse inventory &amp; stock movement tracking</p>
+
+    <div class="card auth__card">
+      <h1 class="auth__title">Sign in</h1>
+      <p class="auth__subtitle">Use your StockRoom account to continue.</p>
+
+      @if (formError()) {
+        <div class="banner banner--danger" role="alert" data-testid="login-error">
+          <div class="banner__body">{{ formError() }}</div>
+        </div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <div class="field">
+          <label class="field__label" for="email">Email</label>
+          <input
+            id="email"
+            class="input"
+            [class.input--invalid]="errorFor('email')"
+            type="email"
+            formControlName="email"
+            autocomplete="username"
+            inputmode="email"
+            placeholder="you@company.com"
+            data-testid="login-email"
+          />
+          @if (errorFor('email'); as message) {
+            <span class="field__error" data-testid="login-email-error">{{ message }}</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="password">Password</label>
+          <input
+            id="password"
+            class="input"
+            [class.input--invalid]="errorFor('password')"
+            type="password"
+            formControlName="password"
+            autocomplete="current-password"
+            data-testid="login-password"
+          />
+          @if (errorFor('password'); as message) {
+            <span class="field__error" data-testid="login-password-error">{{ message }}</span>
+          }
+        </div>
+
+        <button
+          type="submit"
+          class="btn btn--primary btn--block"
+          [disabled]="submitting()"
+          data-testid="login-submit"
+        >
+          {{ submitting() ? 'Signing in…' : 'Sign in' }}
+        </button>
+      </form>
+
+      @if (previewShortcut; as shortcutLabel) {
+        <button
+          type="button"
+          class="btn btn--ghost btn--block auth__shortcut"
+          (click)="skipLogin()"
+          data-testid="login-skip"
+        >
+          {{ shortcutLabel }}
+        </button>
+      }
+
+      <p class="auth__switch">
+        Don’t have an account?
+        <a routerLink="/signup" data-testid="link-signup">Create one</a>
+      </p>
+    </div>
+  </div>
+</div>
