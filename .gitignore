@@ -6,6 +6,11 @@ dist/
 out-tsc/
 /tmp/
 
+# Local secrets — README tells you to `cp .env.example .env`; never commit the result.
+.env
+.env.*
+!.env.example
+
 # Angular build cache
 .angular/
 

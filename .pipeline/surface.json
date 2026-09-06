@@ -8,15 +8,87 @@
   "routes": [
     {
       "method": "GET",
-      "path": "/health"
+      "path": "/api/health"
     },
     {
       "method": "GET",
-      "path": "/trpc/users.findAll"
+      "path": "/api/health/deep"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/signup"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login"
     },
     {
       "method": "GET",
-      "path": "/trpc/users.findById"
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout"
+    },
+    {
+      "method": "GET",
+      "path": "/api/items"
+    },
+    {
+      "method": "GET",
+      "path": "/api/items/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/api/items"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/items/:id"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/items/:id"
+    },
+    {
+      "method": "GET",
+      "path": "/api/locations"
+    },
+    {
+      "method": "GET",
+      "path": "/api/locations/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/api/locations"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/locations/:id"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/locations/:id"
+    },
+    {
+      "method": "POST",
+      "path": "/api/movements"
+    },
+    {
+      "method": "GET",
+      "path": "/api/movements"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/low-stock"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/settings"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/admin/settings"
     }
   ],
   "components": [
