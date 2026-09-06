@@ -1,9 +1,9 @@
 import { IsNotEmpty, IsString } from 'class-validator';
 
 /**
- * `email` is validated with `IsString`, not `IsEmail`, on purpose: the demo
- * logins the platform mints (e.g. `clerk@demo`) are not RFC-valid addresses and
- * an `IsEmail` check would lock the seeded accounts out of their own app.
+ * `email` is validated with `IsString`, not `IsEmail`, on purpose: platform-minted
+ * logins are not guaranteed to be RFC-valid addresses, and an `IsEmail` check would
+ * lock those accounts out of their own app.
  */
 export class LoginDto {
   @IsString()

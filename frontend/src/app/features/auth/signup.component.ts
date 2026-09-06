@@ -44,13 +44,7 @@ export class SignupComponent {
     const control = this.form.controls[field];
     if (!control.touched) return null;
     if (control.hasError('required')) {
-      const labels = {
-        name: 'Enter your full name.',
-        email: 'Enter your email address.',
-        password: 'Choose a password.',
-        confirmPassword: 'Re-enter your password.',
-      } as const;
-      return labels[field];
+      return 'This field is required.';
     }
     if (control.hasError('minlength')) return 'Use at least 8 characters.';
     if (field === 'confirmPassword' && this.form.hasError('mismatch')) {
