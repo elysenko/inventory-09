@@ -16,12 +16,16 @@ model User {
   role         Role     @default(USER)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  movements Movement[]
 }
 
 /// One value per role the stack contract declares (stacks/combos/enterprise.json auth.roles).
 /// Colossus mints one login per role; add app roles here AND to the contract, never demo users.
+/// CLERK is the app-level non-privileged operator role (records movements, browses stock).
 enum Role {
   USER
+  CLERK
   MANAGER
   ADMIN
 }
@@ -40,4 +44,93 @@ model ColossusAccount {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@map("colossus_accounts")
+}
+
+/// Catalogue entry. `reorderAt` is the low-stock threshold compared against SUM(StockLevel.qty).
+model Item {
+  id          String   @id @default(uuid())
+  sku         String   @unique
+  name        String
+  description String?
+  unit        String
+  reorderAt   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  stockLevels StockLevel[]
+  movements   Movement[]
+
+  @@index([name])
+}
+
+/// Physical storage location. `name` is the natural key the seed upserts on.
+model Location {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  zone      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stockLevels   StockLevel[]
+  movementsFrom Movement[]   @relation("MovementFromLocation")
+  movementsTo   Movement[]   @relation("MovementToLocation")
+
+  @@index([zone])
+}
+
+/// On-hand quantity of one item at one location. The conditional `updateMany`
+/// guard in MovementsService relies on @@unique([itemId, locationId]) to make
+/// over-draw rejection race-safe.
+model StockLevel {
+  id         String   @id @default(uuid())
+  itemId     String
+  locationId String
+  qty        Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  item     Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, locationId])
+  @@index([locationId])
+}
+
+/// Immutable audit record of a stock change. Never updated or deleted —
+/// corrections are entered as compensating movements.
+model Movement {
+  id        String       @id @default(uuid())
+  type      MovementType
+  itemId    String
+  fromLocId String?
+  toLocId   String?
+  qty       Int
+  note      String?
+  userId    String
+  createdAt DateTime     @default(now())
+
+  item    Item      @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  fromLoc Location? @relation("MovementFromLocation", fields: [fromLocId], references: [id], onDelete: Restrict)
+  toLoc   Location? @relation("MovementToLocation", fields: [toLocId], references: [id], onDelete: Restrict)
+  user    User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([itemId, createdAt])
+  @@index([createdAt])
+  @@index([type])
+  @@index([userId])
+}
+
+/// IN adds to toLoc; OUT removes from fromLoc; TRANSFER moves fromLoc -> toLoc.
+enum MovementType {
+  IN
+  OUT
+  TRANSFER
+}
+
+/// Runtime override layer for service credentials (postgresql / minio / llm).
+/// `resolveConfig()` reads process.env first and falls back to this table.
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
