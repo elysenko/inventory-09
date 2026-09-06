@@ -1,0 +1,13 @@
+{
+  "build": {
+    "dockerfile": "Dockerfile",
+    "method": "dockerfile",
+    "port": 80
+  },
+  "env": {
+    "required": []
+  },
+  "name": "inventory-09-staging",
+  "run": {},
+  "schemaVersion": 1
+}
