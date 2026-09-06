@@ -57,7 +57,15 @@ export interface Movement {
   note?: string | null;
   userId: string;
   userEmail: string;
+  userName?: string | null;
   createdAt: string;
+}
+
+/** GET /api/items/:id — item, totals and the per-location breakdown. */
+export interface ItemDetail extends ItemWithTotals {
+  byLocation: StockLevel[];
+  /** Stable alias the server also emits; identical contents to `byLocation`. */
+  stockLevels: StockLevel[];
 }
 
 /** GET /api/reports/low-stock row. */
@@ -78,6 +86,9 @@ export interface SettingEntry {
   label: string;
   value: string;
   configured: boolean;
+  /** Where the resolved value came from; null when unconfigured. */
+  source?: 'env' | 'db' | null;
+  updatedAt?: string | null;
 }
 
 /** Paginated list envelope returned by the list endpoints. */

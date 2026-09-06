@@ -1,5 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { ApiService } from '../../core/api.service';
+import { toApiError } from '../../core/api-error';
 import type { SettingEntry } from '../../core/models';
 
 interface ServiceCard {
@@ -37,25 +39,48 @@ const SERVICES: ServiceCard[] = [
   styleUrls: ['./settings.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SettingsComponent {
+export class SettingsComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
+  private readonly api = inject(ApiService);
 
   readonly services = SERVICES;
   readonly saving = signal(false);
   readonly savedService = signal<string | null>(null);
+  /** Per-service save failure, keyed by service name. */
+  readonly saveErrors = signal<Record<string, string>>({});
 
   /**
-   * Backend-provided data. Replaced with an API call by the service layer.
-   * Values arrive masked from the server; `configured` reflects env-or-DB resolution.
+   * `GET /api/admin/settings` — masked values with a `configured` flag that
+   * reflects env-then-database resolution on the server.
+   *
+   * Seeded from the static key registry above so the form renders its fields on
+   * first paint and an unreachable API reads as "not configured" rather than as
+   * "all services configured", which is what an empty list would imply.
    */
-  readonly settings = signal<SettingEntry[]>([
-    { key: 'DATABASE_URL', service: 'postgresql', label: 'Connection URL', value: 'postgresql://••••••@app-db:5432/stockroom', configured: true },
-    { key: 'MINIO_ENDPOINT', service: 'minio', label: 'Endpoint', value: '', configured: false },
-    { key: 'MINIO_ACCESS_KEY', service: 'minio', label: 'Access key', value: '', configured: false },
-    { key: 'MINIO_SECRET_KEY', service: 'minio', label: 'Secret key', value: '', configured: false },
-    { key: 'LLM_API_KEY', service: 'llm', label: 'API key', value: '', configured: false },
-    { key: 'LLM_BASE_URL', service: 'llm', label: 'Base URL', value: '', configured: false },
-  ]);
+  readonly settings = signal<SettingEntry[]>(
+    SERVICES.flatMap((service) =>
+      service.keys.map((key) => ({
+        key,
+        service: service.service,
+        label: key,
+        value: '',
+        configured: false,
+      })),
+    ),
+  );
+
+  async ngOnInit(): Promise<void> {
+    await this.reload();
+  }
+
+  private async reload(): Promise<void> {
+    try {
+      const entries = await this.api.listSettings();
+      if (entries.length > 0) this.settings.set(entries);
+    } catch (error) {
+      this.saveErrors.set({ postgresql: toApiError(error, 'Could not load settings.').message });
+    }
+  }
 
   readonly form = this.fb.nonNullable.group({
     DATABASE_URL: [''],
@@ -103,9 +128,53 @@ export class SettingsComponent {
     );
   }
 
-  save(service: string): void {
+  errorFor(service: string): string | null {
+    return this.saveErrors()[service] ?? null;
+  }
+
+  /**
+   * Persists only the fields the admin actually typed into.
+   *
+   * Blank inputs are skipped rather than sent as empty strings: the displayed
+   * value is masked, so submitting the form unchanged would otherwise overwrite
+   * live credentials with the mask (or with nothing).
+   */
+  async save(service: string): Promise<void> {
+    if (this.saving()) return;
+
+    const keys = SERVICES.find((entry) => entry.service === service)?.keys ?? [];
+    const values = this.form.getRawValue();
+    const entries = keys
+      .map((key) => ({ key, value: (values[this.controlName(key)] ?? '').trim() }))
+      .filter((entry) => entry.value !== '');
+
+    this.savedService.set(null);
+    this.saveErrors.update((errors) => ({ ...errors, [service]: '' }));
+
+    if (entries.length === 0) {
+      this.saveErrors.update((errors) => ({
+        ...errors,
+        [service]: 'Enter at least one value before saving.',
+      }));
+      return;
+    }
+
     this.saving.set(true);
-    this.savedService.set(service);
-    this.saving.set(false);
+    try {
+      this.settings.set(await this.api.updateSettings(entries));
+      // Clear the typed secrets from the DOM once they are stored server-side.
+      for (const entry of entries) {
+        this.form.controls[this.controlName(entry.key)].setValue('');
+      }
+      this.savedService.set(service);
+      this.saveErrors.update((errors) => ({ ...errors, [service]: '' }));
+    } catch (error) {
+      this.saveErrors.update((errors) => ({
+        ...errors,
+        [service]: toApiError(error, 'Could not save those credentials.').message,
+      }));
+    } finally {
+      this.saving.set(false);
+    }
   }
 }

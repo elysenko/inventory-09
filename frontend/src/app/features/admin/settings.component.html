@@ -64,6 +64,12 @@
               Credentials saved.
             </p>
           }
+
+          @if (errorFor(service.service); as message) {
+            <p class="service__saved" role="alert" [attr.data-testid]="'save-error-' + service.service">
+              {{ message }}
+            </p>
+          }
         </form>
       </section>
     }

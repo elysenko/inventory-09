@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs';
@@ -29,7 +29,7 @@ const NAV: NavItem[] = [
   styleUrls: ['./shell.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ShellComponent {
+export class ShellComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
@@ -46,6 +46,15 @@ export class ShellComponent {
 
   readonly user = this.auth.currentUser;
   readonly drawerOpen = signal(false);
+
+  /**
+   * Reconcile the cached session with the server once the authenticated shell
+   * mounts. Done here rather than in a route guard so it never delays the first
+   * paint, and never runs on the public login / signup screens.
+   */
+  ngOnInit(): void {
+    void this.auth.refresh();
+  }
 
   /** Nav links the current role is allowed to see. */
   readonly navItems = computed<NavItem[]>(() => {

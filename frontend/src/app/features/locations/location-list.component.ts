@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { ApiService } from '../../core/api.service';
+import { toApiError } from '../../core/api-error';
 import { ConfirmDialogComponent } from '../../shared/confirm-dialog.component';
 import type { Location, StockLevel } from '../../core/models';
 
@@ -11,37 +13,40 @@ import type { Location, StockLevel } from '../../core/models';
   styleUrls: ['./location-list.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LocationListComponent {
+export class LocationListComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly api = inject(ApiService);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
-  /** Backend-provided data. Replaced with an API call by the service layer. */
-  readonly locations = signal<Location[]>([
-    { id: 'loc-1', name: 'Zone A', zone: 'Receiving', createdAt: '2026-01-10T08:00:00Z' },
-    { id: 'loc-2', name: 'Zone B', zone: 'Main racking', createdAt: '2026-01-10T08:05:00Z' },
-    { id: 'loc-3', name: 'Zone C', zone: 'Dispatch', createdAt: '2026-01-10T08:10:00Z' },
-    { id: 'loc-4', name: 'Zone D', zone: 'Quarantine', createdAt: '2026-02-15T08:10:00Z' },
-  ]);
+  /** `GET /api/locations`. */
+  readonly locations = signal<Location[]>([]);
 
-  /** Backend-provided data. Replaced with an API call by the service layer. */
-  readonly stockLevels = signal<StockLevel[]>([
-    { id: 'sl-1', itemId: 'itm-001', locationId: 'loc-1', locationName: 'Zone A', zone: 'Receiving', qty: 90 },
-    { id: 'sl-2', itemId: 'itm-001', locationId: 'loc-2', locationName: 'Zone B', zone: 'Main racking', qty: 52 },
-    { id: 'sl-3', itemId: 'itm-002', locationId: 'loc-2', locationName: 'Zone B', zone: 'Main racking', qty: 68 },
-    { id: 'sl-4', itemId: 'itm-003', locationId: 'loc-1', locationName: 'Zone A', zone: 'Receiving', qty: 120 },
-    { id: 'sl-5', itemId: 'itm-003', locationId: 'loc-2', locationName: 'Zone B', zone: 'Main racking', qty: 90 },
-    { id: 'sl-6', itemId: 'itm-003', locationId: 'loc-3', locationName: 'Zone C', zone: 'Dispatch', qty: 100 },
-    { id: 'sl-7', itemId: 'itm-004', locationId: 'loc-1', locationName: 'Zone A', zone: 'Receiving', qty: 7 },
-    { id: 'sl-8', itemId: 'itm-005', locationId: 'loc-2', locationName: 'Zone B', zone: 'Main racking', qty: 60 },
-    { id: 'sl-9', itemId: 'itm-005', locationId: 'loc-3', locationName: 'Zone C', zone: 'Dispatch', qty: 36 },
-    { id: 'sl-10', itemId: 'itm-006', locationId: 'loc-2', locationName: 'Zone B', zone: 'Main racking', qty: 20 },
-    { id: 'sl-11', itemId: 'itm-007', locationId: 'loc-3', locationName: 'Zone C', zone: 'Dispatch', qty: 40 },
-    { id: 'sl-12', itemId: 'itm-008', locationId: 'loc-1', locationName: 'Zone A', zone: 'Receiving', qty: 22 },
-    { id: 'sl-13', itemId: 'itm-008', locationId: 'loc-3', locationName: 'Zone C', zone: 'Dispatch', qty: 12 },
-  ]);
+  /** Per-location holdings, aggregated from each item's stock breakdown. */
+  readonly stockLevels = signal<StockLevel[]>([]);
+
+  async ngOnInit(): Promise<void> {
+    await this.reload();
+  }
+
+  private async reload(): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
+    try {
+      const [locations, stockLevels] = await Promise.all([
+        this.api.listLocations(),
+        this.api.listStockLevels(),
+      ]);
+      this.locations.set(locations);
+      this.stockLevels.set(stockLevels);
+    } catch (error) {
+      this.error.set(toApiError(error, 'Could not load storage locations.').message);
+    } finally {
+      this.loading.set(false);
+    }
+  }
 
   private readonly queryParams = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
@@ -92,9 +97,22 @@ export class LocationListComponent {
     });
   }
 
-  confirmDelete(): void {
+  /**
+   * The server refuses a location that still holds stock, or one referenced by
+   * the immutable movement log, with a 409. That message is shown in the list's
+   * error banner rather than swallowed, so a refused delete is never mistaken
+   * for a successful one.
+   */
+  async confirmDelete(): Promise<void> {
     const id = this.deleteId();
-    if (id !== null) this.locations.update((rows) => rows.filter((row) => row.id !== id));
-    this.closeDelete();
+    if (id === null) return;
+    try {
+      await this.api.deleteLocation(id);
+      this.closeDelete();
+      await this.reload();
+    } catch (error) {
+      this.error.set(toApiError(error, 'Could not delete that location.').message);
+      this.closeDelete();
+    }
   }
 }

@@ -1,5 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { ApiService } from '../../core/api.service';
+import { toApiError } from '../../core/api-error';
 import { AuthService } from '../../core/auth.service';
 import type { LowStockRow } from '../../core/models';
 
@@ -10,8 +12,9 @@ import type { LowStockRow } from '../../core/models';
   styleUrls: ['./low-stock.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LowStockComponent {
+export class LowStockComponent implements OnInit {
   private readonly auth = inject(AuthService);
+  private readonly api = inject(ApiService);
 
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
@@ -22,15 +25,22 @@ export class LowStockComponent {
   });
 
   /**
-   * Backend-provided data. Replaced with an API call by the service layer.
-   * Server returns items where SUM(qty) <= reorderAt, sorted by shortfall desc.
+   * `GET /api/reports/low-stock` — items where SUM(qty) <= reorderAt, already
+   * sorted by shortfall descending. Manager-only on the server.
    */
-  readonly rows = signal<LowStockRow[]>([
-    { id: 'itm-002', sku: 'SKU-002', name: 'Hex Bolt 12mm', unit: 'each', totalQty: 68, reorderAt: 100, shortfall: 32 },
-    { id: 'itm-004', sku: 'SKU-004', name: 'Nitrile Gloves (L)', unit: 'box', totalQty: 7, reorderAt: 30, shortfall: 23 },
-    { id: 'itm-008', sku: 'SKU-008', name: 'Safety Goggles', unit: 'each', totalQty: 34, reorderAt: 50, shortfall: 16 },
-    { id: 'itm-006', sku: 'SKU-006', name: 'Shelf Bracket 300mm', unit: 'each', totalQty: 20, reorderAt: 20, shortfall: 0 },
-  ]);
+  readonly rows = signal<LowStockRow[]>([]);
+
+  async ngOnInit(): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
+    try {
+      this.rows.set(await this.api.lowStock());
+    } catch (error) {
+      this.error.set(toApiError(error, 'Could not load the low-stock report.').message);
+    } finally {
+      this.loading.set(false);
+    }
+  }
 
   readonly sorted = computed(() => [...this.rows()].sort((a, b) => b.shortfall - a.shortfall));
 

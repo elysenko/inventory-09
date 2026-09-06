@@ -133,7 +133,7 @@
         </div>
       }
     }
-  } @else {
+  } @else if (!loading()) {
     <div class="card empty" data-testid="detail-not-found">
       <div class="empty__title">Item not found</div>
       <p class="empty__body">That item may have been deleted.</p>

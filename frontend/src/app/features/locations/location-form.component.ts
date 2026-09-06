@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { ApiService } from '../../core/api.service';
+import { toApiError } from '../../core/api-error';
 import type { Location } from '../../core/models';
 
 @Component({
@@ -12,21 +14,17 @@ import type { Location } from '../../core/models';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LocationFormComponent {
-  private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly fb = inject(FormBuilder);
+  private readonly api = inject(ApiService);
 
   readonly saving = signal(false);
   readonly formError = signal<string | null>(null);
   readonly fieldErrors = signal<Record<string, string>>({});
 
-  /** Backend-provided data. Replaced with an API call by the service layer. */
-  readonly locations = signal<Location[]>([
-    { id: 'loc-1', name: 'Zone A', zone: 'Receiving', createdAt: '2026-01-10T08:00:00Z' },
-    { id: 'loc-2', name: 'Zone B', zone: 'Main racking', createdAt: '2026-01-10T08:05:00Z' },
-    { id: 'loc-3', name: 'Zone C', zone: 'Dispatch', createdAt: '2026-01-10T08:10:00Z' },
-    { id: 'loc-4', name: 'Zone D', zone: 'Quarantine', createdAt: '2026-02-15T08:10:00Z' },
-  ]);
+  /** The location being edited, loaded from `GET /api/locations/:id`. */
+  readonly existing = signal<Location | null>(null);
 
   private readonly params = toSignal(this.route.paramMap, {
     initialValue: this.route.snapshot.paramMap,
@@ -34,18 +32,31 @@ export class LocationFormComponent {
 
   readonly locationId = computed(() => this.params().get('id'));
   readonly isEdit = computed(() => this.locationId() !== null);
-  readonly existing = computed<Location | null>(
-    () => this.locations().find((l) => l.id === this.locationId()) ?? null,
-  );
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required]],
     zone: ['', [Validators.required]],
   });
 
+  private hydratedFor: string | null = null;
+
   constructor() {
-    const location = this.existing();
-    if (location) this.form.patchValue({ name: location.name, zone: location.zone });
+    effect(() => {
+      const id = this.locationId();
+      if (id !== null && id !== this.hydratedFor) void this.load(id);
+    });
+  }
+
+  private async load(id: string): Promise<void> {
+    this.hydratedFor = id;
+    try {
+      const location = await this.api.getLocation(id);
+      this.existing.set(location);
+      this.form.patchValue({ name: location.name, zone: location.zone });
+    } catch (error) {
+      this.hydratedFor = null;
+      this.formError.set(toApiError(error, 'Could not load that location.').message);
+    }
   }
 
   errorFor(field: 'name' | 'zone'): string | null {
@@ -56,25 +67,33 @@ export class LocationFormComponent {
     return null;
   }
 
-  save(): void {
+  /**
+   * `name` is unique in the database. The duplicate is detected there rather
+   * than against a locally-held list, so the check cannot be defeated by a
+   * concurrent create or by a location the client has not loaded; the server
+   * returns `fieldErrors.name`, which renders inline.
+   */
+  async save(): Promise<void> {
     this.form.markAllAsTouched();
     this.formError.set(null);
     this.fieldErrors.set({});
-    if (this.form.invalid) return;
+    if (this.form.invalid || this.saving()) return;
 
-    const { name } = this.form.getRawValue();
-    const clash = this.locations().find(
-      (l) => l.name.toLowerCase() === name.trim().toLowerCase() && l.id !== this.locationId(),
-    );
-
-    // Mirrors the server's unique-constraint response on `name`.
-    if (clash) {
-      this.fieldErrors.set({ name: `A location named “${clash.name}” already exists.` });
-      this.formError.set('That location name is already in use.');
-      return;
-    }
+    const raw = this.form.getRawValue();
+    const payload = { name: raw.name.trim(), zone: raw.zone.trim() };
 
     this.saving.set(true);
-    void this.router.navigate(['/locations']);
+    try {
+      const id = this.locationId();
+      if (id !== null) await this.api.updateLocation(id, payload);
+      else await this.api.createLocation(payload);
+      await this.router.navigate(['/locations']);
+    } catch (error) {
+      const apiError = toApiError(error, 'Could not save that location.');
+      this.formError.set(apiError.message);
+      this.fieldErrors.set(apiError.fieldErrors ?? {});
+    } finally {
+      this.saving.set(false);
+    }
   }
 }

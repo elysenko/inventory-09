@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { ApiService } from '../../core/api.service';
+import { toApiError } from '../../core/api-error';
 import { AuthService } from '../../core/auth.service';
 import type { ItemWithTotals } from '../../core/models';
 
@@ -15,10 +17,11 @@ type SortKey = 'sku' | 'name' | 'totalQty' | 'reorderAt';
   styleUrls: ['./item-list.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ItemListComponent {
+export class ItemListComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
+  private readonly api = inject(ApiService);
 
   readonly isManager = computed(() => {
     this.auth.currentUser();
@@ -28,17 +31,26 @@ export class ItemListComponent {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
-  /** Backend-provided data. Replaced with an API call by the service layer. */
-  readonly items = signal<ItemWithTotals[]>([
-    { id: 'itm-001', sku: 'SKU-001', name: 'Steel Bracket M8', description: 'Galvanised mounting bracket, 8mm bore.', unit: 'each', reorderAt: 25, totalQty: 142, createdAt: '2026-01-12T09:00:00Z' },
-    { id: 'itm-002', sku: 'SKU-002', name: 'Hex Bolt 12mm', description: 'Zinc-plated hex head bolt.', unit: 'each', reorderAt: 100, totalQty: 68, createdAt: '2026-01-12T09:05:00Z' },
-    { id: 'itm-003', sku: 'SKU-003', name: 'Cable Tie 200mm', description: 'UV-stable nylon cable ties, 100 per pack.', unit: 'pack', reorderAt: 40, totalQty: 310, createdAt: '2026-01-14T11:20:00Z' },
-    { id: 'itm-004', sku: 'SKU-004', name: 'Nitrile Gloves (L)', description: 'Powder-free disposable gloves, 100 per box.', unit: 'box', reorderAt: 30, totalQty: 7, createdAt: '2026-01-18T08:40:00Z' },
-    { id: 'itm-005', sku: 'SKU-005', name: 'Packing Tape 48mm', description: 'Clear polypropylene carton sealing tape.', unit: 'roll', reorderAt: 15, totalQty: 96, createdAt: '2026-02-02T13:15:00Z' },
-    { id: 'itm-006', sku: 'SKU-006', name: 'Shelf Bracket 300mm', description: 'Heavy-duty powder-coated shelf bracket.', unit: 'each', reorderAt: 20, totalQty: 20, createdAt: '2026-02-09T15:00:00Z' },
-    { id: 'itm-007', sku: 'SKU-007', name: 'Pallet Wrap 500mm', description: 'Blown stretch film for pallet wrapping.', unit: 'roll', reorderAt: 12, totalQty: 40, createdAt: '2026-02-21T10:05:00Z' },
-    { id: 'itm-008', sku: 'SKU-008', name: 'Safety Goggles', description: 'Anti-fog polycarbonate safety eyewear.', unit: 'each', reorderAt: 50, totalQty: 34, createdAt: '2026-03-03T07:45:00Z' },
-  ]);
+  /**
+   * The full catalogue, loaded from `GET /api/items`.
+   *
+   * The header renders "N of M items" and the low-stock count across the whole
+   * catalogue, and search / sort / paging are applied below over the same set,
+   * so this holds every item rather than one server page.
+   */
+  readonly items = signal<ItemWithTotals[]>([]);
+
+  async ngOnInit(): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
+    try {
+      this.items.set(await this.api.listAllItems());
+    } catch (error) {
+      this.error.set(toApiError(error, 'Could not load the item catalogue.').message);
+    } finally {
+      this.loading.set(false);
+    }
+  }
 
   // ---- URL is the single source of truth for search / filter / sort / page ----
   private readonly params = toSignal(this.route.queryParamMap, {

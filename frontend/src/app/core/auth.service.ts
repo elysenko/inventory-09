@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { ApiService } from './api.service';
+import { toApiError } from './api-error';
 import type { ApiError, Role, User } from './models';
 import { readJson, removeKeys, writeJson, writeRaw, readRaw } from './storage';
 
@@ -40,7 +40,7 @@ const PREVIEW_TOKEN = COLOSSUS_PREVIEW ? 'preview-session' : '';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly http = inject(HttpClient);
+  private readonly api = inject(ApiService);
   private readonly router = inject(Router);
 
   readonly currentUser = signal<User | null>(this.restore());
@@ -111,17 +111,12 @@ export class AuthService {
     }
 
     try {
-      const res = await firstValueFrom(
-        this.http.post<{ accessToken: string; user: User }>('/api/auth/login', {
-          email: trimmed,
-          password,
-        }),
-      );
+      const res = await this.api.login(trimmed, password);
       this.persist(res.user, res.accessToken);
       await this.router.navigate([HOME_ROUTE]);
       return null;
-    } catch {
-      return { message: 'That email and password combination was not recognised.' };
+    } catch (error) {
+      return toApiError(error, 'That email and password combination was not recognised.');
     }
   }
 
@@ -135,25 +130,49 @@ export class AuthService {
     }
 
     try {
-      const res = await firstValueFrom(
-        this.http.post<{ accessToken: string; user: User }>('/api/auth/signup', {
-          name: name.trim(),
-          email: trimmed,
-          password,
-        }),
-      );
+      const res = await this.api.signup(trimmed, password, name.trim() || undefined);
       this.persist(res.user, res.accessToken);
       await this.router.navigate([HOME_ROUTE]);
       return null;
-    } catch {
-      return { message: 'Could not create that account. Try a different email address.' };
+    } catch (error) {
+      return toApiError(error, 'Could not create that account. Try a different email address.');
     }
   }
 
   async logout(): Promise<void> {
+    // Sessions are stateless, so the server call is a courtesy: the token is
+    // discarded locally whether or not it succeeds. Never block sign-out on it.
+    if (!COLOSSUS_PREVIEW) {
+      try {
+        await this.api.logout();
+      } catch {
+        /* already signed out, offline, or token expired — clear anyway */
+      }
+    }
     removeKeys(USER_KEY, TOKEN_KEY);
     this.currentUser.set(null);
     await this.router.navigate(['/login']);
+  }
+
+  /**
+   * Re-reads the principal from `/api/auth/me`.
+   *
+   * The signed-in user is restored from localStorage so the first paint is not
+   * blocked, but that copy can be stale (role changed) or backed by a token the
+   * server no longer accepts. Calling this once inside the authenticated shell
+   * reconciles both. A 401 is handled by the interceptor, which clears the
+   * session and redirects, so nothing extra is needed here.
+   */
+  async refresh(): Promise<void> {
+    if (COLOSSUS_PREVIEW) return;
+    const token = this.token();
+    if (token === null || token === '') return;
+    try {
+      const user = await this.api.me();
+      this.persist(user, token);
+    } catch {
+      /* interceptor owns the 401 path; transient failures keep the cached user */
+    }
   }
 
   // ---------------------------------------------------------------------------
