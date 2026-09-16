@@ -1,0 +1,95 @@
+{
+  "site": {
+    "name": "tu-prep-8al4v5vs",
+    "site_id": "tu-prep-8al4v5vs"
+  },
+  "meta": {
+    "generated_by": "declared"
+  },
+  "front_end": {
+    "pages": [
+      {
+        "name": "Settings",
+        "page_id": "admin-settings",
+        "url": "/admin/settings",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Items",
+        "page_id": "items",
+        "url": "/items",
+        "linked_page_ids": []
+      },
+      {
+        "name": ":id",
+        "page_id": "items-id",
+        "url": "/items/:id",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Edit",
+        "page_id": "items-id-edit",
+        "url": "/items/:id/edit",
+        "linked_page_ids": []
+      },
+      {
+        "name": "New",
+        "page_id": "items-new",
+        "url": "/items/new",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Locations",
+        "page_id": "locations",
+        "url": "/locations",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Edit",
+        "page_id": "locations-id-edit",
+        "url": "/locations/:id/edit",
+        "linked_page_ids": []
+      },
+      {
+        "name": "New",
+        "page_id": "locations-new",
+        "url": "/locations/new",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Login",
+        "page_id": "login",
+        "url": "/login",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Movements",
+        "page_id": "movements",
+        "url": "/movements",
+        "linked_page_ids": []
+      },
+      {
+        "name": "New",
+        "page_id": "movements-new",
+        "url": "/movements/new",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Low-stock",
+        "page_id": "reports-low-stock",
+        "url": "/reports/low-stock",
+        "linked_page_ids": []
+      },
+      {
+        "name": "Signup",
+        "page_id": "signup",
+        "url": "/signup",
+        "linked_page_ids": []
+      }
+    ]
+  },
+  "back_end": {
+    "tables": []
+  },
+  "generated_by": "declared"
+}
